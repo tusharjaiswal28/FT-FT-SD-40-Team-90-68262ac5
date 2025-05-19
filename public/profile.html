@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Profile | MemeHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🧠 MemeHub</div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="create.html">Create Meme</a>
+      <a href="profile.html">Profile</a>
+      <a id="auth-link" href="login.html">Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1 id="profileHeading">Your Profile</h1>
+    <div id="profileDetails">
+      <!-- Profile data will load here -->
+    </div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const authLink = document.getElementById('auth-link');
+
+    if (token) {
+      authLink.textContent = 'Logout 🚪';
+      authLink.href = '#';
+      authLink.onclick = () => {
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+      };
+    } else {
+      authLink.textContent = 'Login';
+      authLink.href = 'login.html';
+    }
+
+    async function loadProfile() {
+      if (!token) {
+        document.getElementById("profileDetails").innerHTML = "<p>Please <a href='login.html'>log in</a> to view your profile.</p>";
+        return;
+      }
+
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const userId = payload.userId;
+        const res = await fetch('/api/auth/user/' + userId, {
+          headers: { Authorization: `Bearer ${token}` }
+        });
+
+        if (!res.ok) throw new Error('User fetch failed');
+        const user = await res.json();
+        document.getElementById("profileHeading").textContent = `👤 ${user.username}'s Profile`;
+        document.getElementById("profileDetails").innerHTML = `
+          <p><strong>Username:</strong> ${user.username}</p>
+          <p><strong>User ID:</strong> ${userId}</p>
+        `;
+      } catch (err) {
+        document.getElementById("profileDetails").innerHTML = "<p>Failed to load profile.</p>";
+      }
+    }
+
+    loadProfile();
+  </script>
+</body>
+</html>

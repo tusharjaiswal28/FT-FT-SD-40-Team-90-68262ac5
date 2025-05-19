@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Edit Meme - MemeHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🧠 MemeHub</div>
+    <nav class="nav-links">
+      <a href="dashboard.html">Dashboard</a>
+      <a href="create.html">Create Meme</a>
+      <button onclick="logout()">Logout 🚪</button>
+    </nav>
+  </header>
+
+  <main class="edit-form-container">
+    <h1>Edit Meme</h1>
+
+    <form id="editMemeForm" enctype="multipart/form-data">
+      <div>
+        <label for="title">Title:</label><br />
+        <input type="text" id="title" name="title" required />
+      </div>
+
+      <div>
+        <label for="tags">Tags (comma-separated):</label><br />
+        <input type="text" id="tags" name="tags" />
+      </div>
+
+      <div>
+        <p>Current Image:</p>
+        <img id="currentImage" src="" alt="Current Meme" class="meme-thumb" />
+      </div>
+
+      <div>
+        <label for="image">Replace Image (optional):</label><br />
+        <input type="file" id="image" name="image" accept="image/*" />
+      </div>
+
+      <button type="submit">Update Meme ✏️</button>
+    </form>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const memeId = new URLSearchParams(window.location.search).get('id');
+
+    if (!token || !memeId) {
+      alert("Unauthorized access");
+      window.location.href = "login.html";
+    }
+
+    async function fetchMeme() {
+      const res = await fetch(`/api/memes/${memeId}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+
+      if (res.status !== 200) {
+        alert("Meme not found or unauthorized.");
+        window.location.href = "dashboard.html";
+        return;
+      }
+
+      const meme = await res.json();
+      document.getElementById("title").value = meme.title;
+      document.getElementById("tags").value = meme.tags.join(", ");
+      document.getElementById("currentImage").src = meme.imageUrl;
+    }
+
+    document.getElementById("editMemeForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      const formData = new FormData();
+      formData.append("title", form.title.value);
+      formData.append("tags", form.tags.value);
+
+      if (form.image.files.length > 0) {
+        formData.append("image", form.image.files[0]);
+      }
+
+      const res = await fetch(`/api/memes/${memeId}`, {
+        method: "PUT",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData
+      });
+
+      if (res.ok) {
+        alert("✅ Meme updated successfully!");
+        window.location.href = "dashboard.html";
+      } else {
+        alert("❌ Failed to update meme");
+      }
+    });
+
+    function logout() {
+      localStorage.removeItem('token');
+      window.location.href = "login.html";
+    }
+
+    fetchMeme();
+  </script>
+</body>
+</html>

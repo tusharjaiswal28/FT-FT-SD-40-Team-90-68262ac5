@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MemeHub Dashboard</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🧠 MemeHub</div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="#">Explore</a>
+      <a href="create.html">Create Meme</a>
+      <a href="#">Notifications</a>
+      <a href="profile.html">Profile</a>
+      <button onclick="logout()" style="margin-left: 20px;">Logout 🚪</button>
+    </nav>
+  </header>
+
+  <main class="dashboard">
+    <h1 id="welcomeUser">Welcome 👋</h1>
+
+    <section class="stats-summary">
+      <div class="stat-card">Total Memes: <strong id="totalMemes">0</strong></div>
+      <div class="stat-card">Views: <strong id="totalViews">0</strong></div>
+      <div class="stat-card">Votes: <strong id="totalVotes">0</strong></div>
+      <div class="stat-card">Comments: <strong id="totalComments">0</strong></div>
+    </section>
+
+    <section class="sort-options">
+      <label for="sort-by">Sort By:</label>
+      <select id="sort-by" onchange="loadMemes()">
+        <option value="popularity">Popularity</option>
+        <option value="date">Creation Date</option>
+      </select>
+
+      <label for="order">Order:</label>
+      <select id="order" onchange="loadMemes()">
+        <option value="desc">Descending 🔽</option>
+        <option value="asc">Ascending 🔼</option>
+      </select>
+    </section>
+
+    <section class="meme-library">
+      <table>
+        <thead>
+          <tr>
+            <th>Meme</th>
+            <th>Title</th>
+            <th>Views 👁️</th>
+            <th>Votes 👍</th>
+            <th>Comments 💬</th>
+            <th>Date</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="memeTableBody">
+          <!-- Memes will be injected here -->
+        </tbody>
+      </table>
+    </section>
+  </main>
+
+  <script>
+    function logout() {
+      localStorage.removeItem('token');
+      localStorage.removeItem('userId');
+      window.location.href = "login.html";
+    }
+
+    function editMeme(id) {
+      window.location.href = `edit.html?id=${id}`;
+    }
+
+    async function loadMemes() {
+      const token = localStorage.getItem('token');
+      const res = await fetch('/api/memes', {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      if (res.status === 401) {
+        alert("Please log in first");
+        window.location.href = "login.html";
+        return;
+      }
+
+      const memes = await res.json();
+      const sortBy = document.getElementById('sort-by').value;
+      const order = document.getElementById('order').value;
+
+      memes.sort((a, b) => {
+        const valA = sortBy === 'popularity' ? (a.votes || 0) : new Date(a.createdAt);
+        const valB = sortBy === 'popularity' ? (b.votes || 0) : new Date(b.createdAt);
+        return order === 'asc' ? valA - valB : valB - valA;
+      });
+
+      let totalViews = 0, totalVotes = 0, totalComments = 0;
+
+      const tbody = document.getElementById("memeTableBody");
+      tbody.innerHTML = memes.map(meme => {
+        totalViews += meme.views || 0;
+        totalVotes += meme.votes || 0;
+        totalComments += meme.comments?.length || 0;
+
+        return `
+          <tr>
+            <td><img src="${meme.imageUrl}" alt="${meme.title}" class="meme-thumb" /></td>
+            <td>${meme.title}</td>
+            <td>${(meme.views || 0).toLocaleString()}</td>
+            <td>${(meme.votes || 0).toLocaleString()}</td>
+            <td>${(meme.comments?.length || 0).toLocaleString()}</td>
+            <td>${new Date(meme.createdAt).toISOString().split('T')[0]}</td>
+            <td>
+              <button class="edit-btn" onclick="editMeme('${meme._id}')">Edit</button>
+              <button class="delete-btn" onclick="deleteMeme('${meme._id}')">Delete</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      document.getElementById("totalMemes").textContent = memes.length;
+      document.getElementById("totalViews").textContent = totalViews.toLocaleString();
+      document.getElementById("totalVotes").textContent = totalVotes.toLocaleString();
+      document.getElementById("totalComments").textContent = totalComments.toLocaleString();
+    }
+
+    async function deleteMeme(id) {
+  const token = localStorage.getItem('token');
+  const confirmed = confirm("Are you sure you want to delete this meme?");
+  if (!confirmed) return;
+
+  const res = await fetch('/api/memes/' + id, {
+    method: 'DELETE',
+    headers: {
+      Authorization: `Bearer ${token}`
+    }
+  });
+
+  if (res.ok) {
+    loadMemes(); // Refresh meme list
+  } else {
+    const error = await res.text();
+    alert("Failed to delete meme: " + error);
+  }
+}
+
+
+    async function loadUserInfo() {
+      const token = localStorage.getItem('token');
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const userId = payload.userId;
+      localStorage.setItem('userId', userId);
+
+      const res = await fetch(`/api/auth/user/${userId}`, {
+        headers: {
+          Authorization: `Bearer ${token}`
+        }
+      });
+
+      const user = await res.json();
+      document.getElementById("welcomeUser").textContent = `Welcome, ${user.username} 👋`;
+    }
+
+    loadUserInfo();
+    loadMemes();
+  </script>
+</body>
+</html>

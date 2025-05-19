@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MemeHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🧠 MemeHub</div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="create.html">Create Meme</a>
+      <a href="profile.html">Profile</a>
+      <a id="auth-link" href="login.html">Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Welcome to MemeHub! 🎉</h1>
+    <p>Create, share, and vote on your favorite memes.</p>
+
+    <section id="meme-feed" class="meme-feed">
+      <!-- Memes will be injected here -->
+    </section>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const authLink = document.getElementById('auth-link');
+
+    if (token) {
+      authLink.textContent = 'Logout 🚪';
+      authLink.href = '#';
+      authLink.onclick = () => {
+        localStorage.removeItem('token');
+        window.location.reload();
+      };
+    } else {
+      authLink.textContent = 'Login';
+      authLink.href = 'login.html';
+    }
+
+    async function loadMemes() {
+      try {
+        const res = await fetch('/api/memes');
+        const memes = await res.json();
+
+        const container = document.getElementById('meme-feed');
+        if (memes.length === 0) {
+          container.innerHTML = '<p>No memes found. Be the first to upload one!</p>';
+          return;
+        }
+
+        container.innerHTML = memes.map(meme => `
+          <div class="meme-card">
+            <img src="${meme.imageUrl}" alt="${meme.title}" class="meme-image" />
+            <h3>${meme.title}</h3>
+            <p>Views: ${meme.views || 0} | Votes: ${meme.votes || 0}</p>
+          </div>
+        `).join('');
+      } catch (err) {
+        console.error('Failed to load memes', err);
+      }
+    }
+
+    loadMemes();
+  </script>
+</body>
+</html>

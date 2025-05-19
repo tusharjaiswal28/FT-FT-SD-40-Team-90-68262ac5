@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Create Meme | MemeHub</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header class="navbar">
+    <div class="logo">🧠 MemeHub</div>
+    <nav class="nav-links">
+      <a href="index.html">Home</a>
+      <a href="dashboard.html">Dashboard</a>
+      <a href="create.html">Create Meme</a>
+      <a href="profile.html">Profile</a>
+      <a id="auth-link" href="login.html">Login</a>
+    </nav>
+  </header>
+
+  <main>
+    <h1>Create a New Meme</h1>
+
+    <div id="loginPrompt" style="display:none;">
+      <p>Please <a href="login.html">log in</a> to create memes.</p>
+    </div>
+
+    <form id="createMemeForm" enctype="multipart/form-data" style="display:none;">
+      <label for="title">Meme Title:</label><br />
+      <input type="text" id="title" name="title" required /><br /><br />
+
+      <label for="tags">Tags (comma separated):</label><br />
+      <input type="text" id="tags" name="tags" /><br /><br />
+
+      <label for="image">Upload Image:</label><br />
+      <input type="file" id="image" name="image" accept="image/*" required /><br /><br />
+
+      <button type="submit">Create Meme</button>
+    </form>
+
+    <div id="preview" style="margin-top:20px;"></div>
+  </main>
+
+  <script>
+    const token = localStorage.getItem('token');
+    const authLink = document.getElementById('auth-link');
+    const form = document.getElementById('createMemeForm');
+    const loginPrompt = document.getElementById('loginPrompt');
+    const preview = document.getElementById('preview');
+
+    if (token) {
+      authLink.textContent = 'Logout 🚪';
+      authLink.href = '#';
+      authLink.onclick = () => {
+        localStorage.removeItem('token');
+        window.location.href = 'login.html';
+      };
+
+      form.style.display = 'block';
+    } else {
+      authLink.textContent = 'Login';
+      authLink.href = 'login.html';
+
+      loginPrompt.style.display = 'block';
+      form.style.display = 'none';
+    }
+
+    // Preview image on file select
+    document.getElementById('image').addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) {
+        preview.innerHTML = '';
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        preview.innerHTML = `<h3>Preview:</h3><img src="${evt.target.result}" alt="Meme Preview" style="max-width:300px;"/>`;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch('/api/memes', {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Authorization: `Bearer ${token}`
+          }
+        });
+
+        if (!res.ok) {
+          const error = await res.text();
+          throw new Error(error);
+        }
+
+        alert("Meme uploaded successfully!");
+        window.location.href = "dashboard.html";
+
+      } catch (err) {
+        console.error(err);
+        alert("Upload failed.");
+      }
+    });
+  </script>
+</body>
+</html>
